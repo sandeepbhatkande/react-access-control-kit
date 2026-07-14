@@ -17,7 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Changesets needs full history for tags/changelog
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -25,6 +24,16 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+
+      - name: Ensure NPM_TOKEN is set
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::Repository secret NPM_TOKEN is missing or empty. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "NPM_TOKEN secret is present"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
         run: npm ci
@@ -36,9 +45,11 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npx changeset publish
+          # Disable provenance for classic tokens; enable later with npm Trusted Publishing
+          publish: npm publish --access public --provenance=false
           title: "chore: version packages"
           commit: "chore: version packages"
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
