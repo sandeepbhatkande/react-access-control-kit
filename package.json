@@ -3,15 +3,15 @@
   "version": "0.0.0",
   "description": "Lightweight TypeScript-first RBAC library for React with zero runtime dependencies",
   "license": "MIT",
-  "author": "",
+  "author": "Sandeep Bhatkande <sandeepbhatkande72@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sandeep/react-access-control-kit.git"
+    "url": "git+https://github.com/sandeepbhatkande/react-access-control-kit.git"
   },
   "bugs": {
-    "url": "https://github.com/sandeep/react-access-control-kit/issues"
+    "url": "https://github.com/sandeepbhatkande/react-access-control-kit/issues"
   },
-  "homepage": "https://github.com/sandeep/react-access-control-kit#readme",
+  "homepage": "https://github.com/sandeepbhatkande/react-access-control-kit#readme",
   "keywords": [
     "react",
     "rbac",
