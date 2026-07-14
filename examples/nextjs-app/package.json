@@ -1,0 +1,22 @@
+{
+  "name": "nextjs-app",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "^15.1.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-access-control-kit": "file:../.."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "typescript": "^5.7.2"
+  }
+}

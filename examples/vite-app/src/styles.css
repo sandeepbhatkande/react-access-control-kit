@@ -1,0 +1,115 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+  --bg: #f3f6f4;
+  --ink: #13221a;
+  --accent: #1f6f4a;
+  --panel: #ffffff;
+  --muted: #5b6b62;
+  --border: #d5e0d9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, #d7efe3, transparent 40%),
+    linear-gradient(180deg, #eef5f1, var(--bg));
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+}
+
+.header p {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
+.persona-switch {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.persona-switch button,
+.actions button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.persona-switch button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.meta {
+  margin-top: 0.85rem !important;
+  font-size: 0.9rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sidebar,
+main {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 1rem;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.fallback {
+  color: #8a4b16;
+}
+
+.ok {
+  color: var(--accent);
+}
