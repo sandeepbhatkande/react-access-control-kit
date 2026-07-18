@@ -1,5 +1,11 @@
 # react-access-control-kit
 
+## 2.0.0
+
+### Minor Changes
+
+-  Async access loading,  Feature flags, ABAC + policy engine, AccessGuard upgraded, createPolicyEngine, evaluatePolicy, definePolicy(v2.0).
+
 ## 1.5.0
 
 ### Minor Changes
