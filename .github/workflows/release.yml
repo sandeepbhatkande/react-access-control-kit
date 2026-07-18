@@ -55,10 +55,19 @@ jobs:
       - name: Publish to npm
         if: steps.check.outputs.already != 'true'
         run: |
-          set -e
+          set -euo pipefail
           echo "Publishing react-access-control-kit@${{ steps.version.outputs.value }}"
+          # Explicit auth for registry (setup-node also writes this; keep both in sync)
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
           export NPM_CONFIG_PROVENANCE=false
-          npm publish --access public
+          if ! npm publish --access public 2>&1 | tee publish.log; then
+            echo "::error::npm publish failed. Common causes: invalid/expired NPM_TOKEN, token missing Publish permission, or 2FA/OTP required."
+            echo "::group::publish.log"
+            cat publish.log
+            echo "::endgroup::"
+            exit 1
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
