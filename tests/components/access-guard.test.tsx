@@ -67,10 +67,10 @@ describe("AccessGuard", () => {
   });
 
   it("renders fallback when no constraints are provided", () => {
-    renderWithAccess(
-      <AccessGuard fallback="Denied">Secret</AccessGuard>,
-      { permissions: ["posts:read"], roles: ["admin"] },
-    );
+    renderWithAccess(<AccessGuard fallback="Denied">Secret</AccessGuard>, {
+      permissions: ["posts:read"],
+      roles: ["admin"],
+    });
     expect(screen.getByText("Denied")).toBeInTheDocument();
   });
 
@@ -103,5 +103,29 @@ describe("AccessGuard", () => {
       },
     );
     expect(screen.getByText("Inherited")).toBeInTheDocument();
+  });
+
+  it("supports features and mode=all", () => {
+    renderWithAccess(
+      <AccessGuard features={["a", "b"]} mode="all" fallback="Nope">
+        Flags
+      </AccessGuard>,
+      { features: ["a"] },
+    );
+    expect(screen.getByText("Nope")).toBeInTheDocument();
+  });
+
+  it("supports named policy constraint", () => {
+    renderWithAccess(
+      <AccessGuard policy="allow" fallback="Nope">
+        Policy ok
+      </AccessGuard>,
+      {
+        policies: {
+          allow: () => true,
+        },
+      },
+    );
+    expect(screen.getByText("Policy ok")).toBeInTheDocument();
   });
 });
