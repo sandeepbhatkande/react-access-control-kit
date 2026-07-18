@@ -61,4 +61,19 @@ describe("AccessControlProvider", () => {
     expect(screen.getByTestId("permissions").textContent).toBe("");
     expect(screen.getByTestId("roles").textContent).toBe("");
   });
+
+  it("expands roles via roleHierarchy", () => {
+    render(
+      <AccessControlProvider
+        roles={["admin"]}
+        roleHierarchy={{ admin: ["manager"], manager: ["user"] }}
+      >
+        <Probe />
+      </AccessControlProvider>,
+    );
+
+    expect(screen.getByTestId("roles").textContent).toBe(
+      "admin,manager,user",
+    );
+  });
 });

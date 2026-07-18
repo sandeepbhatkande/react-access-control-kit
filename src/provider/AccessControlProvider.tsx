@@ -5,6 +5,7 @@ import {
   normalizePermissions,
   normalizeRoles,
 } from "../utils/normalizePermissions";
+import { expandRoles } from "../utils/expandRoles";
 import { AccessControlContext } from "./AccessControlContext";
 
 const isDev = (): boolean =>
@@ -13,6 +14,7 @@ const isDev = (): boolean =>
 export function AccessControlProvider({
   permissions,
   roles,
+  roleHierarchy,
   children,
 }: AccessControlProviderProps): ReactElement {
   const value = useMemo(() => {
@@ -29,14 +31,16 @@ export function AccessControlProvider({
       Array.isArray(permissions) ? permissions : [],
     );
     const normalizedRoles = normalizeRoles(Array.isArray(roles) ? roles : []);
+    const expandedRoles = expandRoles(normalizedRoles, roleHierarchy);
 
     return {
       permissions: normalizedPermissions,
-      roles: normalizedRoles,
+      roles: expandedRoles,
       permissionSet: new Set(normalizedPermissions),
-      roleSet: new Set(normalizedRoles),
+      roleSet: new Set(expandedRoles),
+      roleHierarchy,
     };
-  }, [permissions, roles]);
+  }, [permissions, roles, roleHierarchy]);
 
   return (
     <AccessControlContext.Provider value={value}>

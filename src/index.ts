@@ -9,7 +9,7 @@ export {
   useAllRoles,
 } from "./hooks";
 
-export { Can } from "./components";
+export { Can, AccessGuard } from "./components";
 
 export {
   hasPermission,
@@ -18,6 +18,9 @@ export {
   hasRole,
   hasAnyRole,
   hasAllRoles,
+  expandRoles,
+  matchPermission,
+  permissionMatches,
 } from "./core";
 
 export { normalizePermissions } from "./utils/normalizePermissions";
@@ -31,6 +34,10 @@ export type {
   AccessControlProviderProps,
   CanProps,
   RoleProps,
+  AccessGuardProps,
+  RoleHierarchy,
 } from "./types";
+
+export type { AccessCheckOptions } from "./core";
 
 export { Role } from "./exports/role";

@@ -1,5 +1,11 @@
 # react-access-control-kit
 
+## 1.5.0
+
+### Minor Changes
+
+- Add wildcard permissions, role hierarchy, and AccessGuard route guards (v1.5).
+
 ## 1.0.0
 
 ### Major Changes

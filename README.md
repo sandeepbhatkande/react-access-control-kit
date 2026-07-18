@@ -5,7 +5,7 @@ Lightweight, TypeScript-first RBAC library for React 18+ with zero runtime depen
 - Tiny bundle (&lt;10 KB gzipped)
 - SSR compatible
 - Tree-shakeable
-- Excellent DX with fully typed hooks and components
+- Wildcards, role hierarchy, and route guards (v1.5)
 
 ## Installation
 
@@ -24,16 +24,23 @@ Peer dependencies: `react` and `react-dom` ≥ 18.
 ```tsx
 import {
   AccessControlProvider,
+  AccessGuard,
   Can,
   Role,
   usePermission,
 } from "react-access-control-kit";
 
+const hierarchy = {
+  admin: ["manager"],
+  manager: ["user"],
+};
+
 function App() {
   return (
     <AccessControlProvider
-      permissions={["posts:read", "posts:write"]}
-      roles={["editor"]}
+      permissions={["posts:*", "users:read"]}
+      roles={["admin"]}
+      roleHierarchy={hierarchy}
     >
       <Dashboard />
     </AccessControlProvider>
@@ -41,7 +48,7 @@ function App() {
 }
 
 function Dashboard() {
-  const canWrite = usePermission("posts:write");
+  const canWrite = usePermission("posts:write"); // true via posts:*
 
   return (
     <>
@@ -49,13 +56,17 @@ function Dashboard() {
         <PostsList />
       </Can>
 
-      <Can permission="posts:delete" fallback={<p>No delete access</p>}>
-        <DeleteButton />
-      </Can>
-
-      <Role role="admin" fallback={<p>Admins only</p>}>
-        <AdminPanel />
+      <Role role="user" fallback={<p>Users only</p>}>
+        {/* true for admin via hierarchy */}
+        <UserArea />
       </Role>
+
+      <AccessGuard
+        role="admin"
+        fallback={<p>Redirect / unauthorized UI</p>}
+      >
+        <AdminPage />
+      </AccessGuard>
 
       {canWrite ? <CreatePostButton /> : null}
     </>
@@ -67,68 +78,108 @@ function Dashboard() {
 
 ### `AccessControlProvider`
 
-Stores roles and permissions and exposes them via React context.
+| Prop            | Type                               | Default | Description                                      |
+| --------------- | ---------------------------------- | ------- | ------------------------------------------------ |
+| `permissions`   | `readonly string[]`                | `[]`    | Permissions granted to the current user          |
+| `roles`         | `readonly string[]`                | `[]`    | Roles granted to the current user                |
+| `roleHierarchy` | `Record<string, readonly string[]>` | —      | Inheritance map (e.g. admin → manager → user)    |
+| `children`      | `ReactNode`                        | —       | App tree                                         |
 
-| Prop          | Type                | Default | Description                             |
-| ------------- | ------------------- | ------- | --------------------------------------- |
-| `permissions` | `readonly string[]` | `[]`    | Permissions granted to the current user |
-| `roles`       | `readonly string[]` | `[]`    | Roles granted to the current user       |
-| `children`    | `ReactNode`         | —       | App tree                                |
+Values are normalized (trimmed, empty strings removed, deduplicated). Roles are expanded using `roleHierarchy` before checks.
 
-Values are normalized (trimmed, empty strings removed, deduplicated). Invalid props warn in development.
+### Wildcard permissions
+
+Granted permissions may include:
+
+| Pattern     | Matches                         |
+| ----------- | ------------------------------- |
+| `posts:read`| Exact match only                |
+| `posts:*`   | `posts:read`, `posts:write`, …  |
+| `*`         | Every permission                |
+
+```ts
+hasPermission({ permissions: ["posts:*"], roles: [] }, "posts:delete"); // true
+```
+
+### Role hierarchy
+
+```tsx
+<AccessControlProvider
+  roles={["admin"]}
+  roleHierarchy={{
+    admin: ["manager"],
+    manager: ["user"],
+  }}
+>
+  {/* useRole("user") === true */}
+</AccessControlProvider>
+```
+
+Cycles are safe (expansion stops).
 
 ### Hooks
 
 All hooks throw if used outside `AccessControlProvider`.
 
-| Hook                | Signature                            | Returns                               |
-| ------------------- | ------------------------------------ | ------------------------------------- |
-| `usePermission`     | `(permission: string) => boolean`    | Exact permission match                |
-| `useAnyPermission`  | `(permissions: string[]) => boolean` | `true` if any match (empty → `false`) |
-| `useAllPermissions` | `(permissions: string[]) => boolean` | `true` if all match (empty → `false`) |
-| `useRole`           | `(role: string) => boolean`          | Exact role match                      |
-| `useAnyRole`        | `(roles: string[]) => boolean`       | `true` if any match (empty → `false`) |
-| `useAllRoles`       | `(roles: string[]) => boolean`       | `true` if all match (empty → `false`) |
+| Hook                | Signature                            | Returns                                      |
+| ------------------- | ------------------------------------ | -------------------------------------------- |
+| `usePermission`     | `(permission: string) => boolean`    | Match (supports wildcards)                   |
+| `useAnyPermission`  | `(permissions: string[]) => boolean` | `true` if any match (empty → `false`)        |
+| `useAllPermissions` | `(permissions: string[]) => boolean` | `true` if all match (empty → `false`)        |
+| `useRole`           | `(role: string) => boolean`          | Match (includes inherited roles)             |
+| `useAnyRole`        | `(roles: string[]) => boolean`       | `true` if any match (empty → `false`)        |
+| `useAllRoles`       | `(roles: string[]) => boolean`       | `true` if all match (empty → `false`)        |
 
 ### Components
 
-#### `<Can />`
+#### `<Can />` / `<Role />`
 
 | Prop          | Type                | Default |
 | ------------- | ------------------- | ------- |
-| `permission`  | `string`            | —       |
-| `permissions` | `readonly string[]` | —       |
+| `permission` / `role` | `string`    | —       |
+| `permissions` / `roles` | `readonly string[]` | — |
 | `mode`        | `"any" \| "all"`    | `"any"` |
 | `fallback`    | `ReactNode`         | `null`  |
 | `children`    | `ReactNode`         | `null`  |
 
-Pass either `permission` or `permissions`. When both are set, `permissions` wins.
+#### `<AccessGuard />` (route guard)
 
-#### `<Role />`
+Router-agnostic. Pass your router’s redirect as `fallback`:
 
-Same shape as `<Can />` using `role` / `roles`.
+```tsx
+import { Navigate } from "react-router-dom";
+import { AccessGuard } from "react-access-control-kit";
 
-### Core utilities (framework-agnostic)
+<AccessGuard
+  permission="billing:view"
+  role="manager"
+  fallback={<Navigate to="/unauthorized" replace />}
+>
+  <BillingPage />
+</AccessGuard>
+```
 
-Useful outside React (API handlers, tests, shared logic):
+When both permission and role constraints are set, **both** must pass. `mode` applies to each list (`"any"` / `"all"`).
+
+### Core utilities
 
 ```ts
 import {
   hasPermission,
-  hasAnyPermission,
-  hasAllPermissions,
   hasRole,
-  hasAnyRole,
-  hasAllRoles,
+  expandRoles,
+  matchPermission,
 } from "react-access-control-kit";
 
-const state = {
-  permissions: ["posts:read"],
-  roles: ["user"],
-};
+hasPermission({ permissions: ["*"], roles: [] }, "x"); // true
 
-hasPermission(state, "posts:read"); // true
-hasAnyRole(state, ["admin", "user"]); // true
+hasRole(
+  { permissions: [], roles: ["admin"] },
+  "user",
+  { roleHierarchy: { admin: ["manager"], manager: ["user"] } },
+); // true
+
+expandRoles(["admin"], { admin: ["manager"] }); // ["admin", "manager"]
 ```
 
 ### Helpers
@@ -136,15 +187,13 @@ hasAnyRole(state, ["admin", "user"]); // true
 - `normalizePermissions(values)` — trim, drop empties/non-strings, dedupe
 - `removeDuplicates(values)` — stable unique list
 - `createPermissionMap(permissions)` — `{ [permission]: true }` map
+- `expandRoles(roles, hierarchy)` — flatten role inheritance
+- `matchPermission(granted, required)` — wildcard-aware match
 
 ## Examples
 
-See:
-
 - [`examples/vite-app`](./examples/vite-app) — Vite + React demo
 - [`examples/nextjs-app`](./examples/nextjs-app) — Next.js App Router demo
-
-Scenarios covered: Admin / Manager / User, protected sidebar, protected buttons, fallback UI.
 
 ## FAQ
 
@@ -152,32 +201,20 @@ Scenarios covered: Admin / Manager / User, protected sidebar, protected buttons,
 Yes for hooks and components. Core `has*` helpers work without React.
 
 **Is it SSR-safe?**  
-Yes. The provider is a pure context wrapper with no browser APIs. In Next.js App Router, wrap client trees with a `"use client"` provider component.
+Yes. No browser APIs. In Next.js App Router, use a `"use client"` provider wrapper.
 
-**Will unused exports be tree-shaken?**  
-Yes. The package sets `"sideEffects": false` and ships ESM.
+**How do route guards work with Next.js?**  
+Use `AccessGuard` in a client component and pass a fallback that calls `redirect()` or renders a link / unauthorized UI.
 
-**How large is the bundle?**  
-Built output targets &lt;10 KB gzipped for the full entry.
+## Out of scope (still)
 
-## Out of scope (v1)
-
-- Wildcard permissions
-- Role hierarchy
 - ABAC / policies
 - Feature flags
-- Route guards
 - Async permission loading
 - Multi-tenant helpers
 - DevTools
 
 ## Roadmap
-
-### v1.5
-
-- Wildcard permissions
-- Role hierarchy
-- Route guards
 
 ### v2.0
 

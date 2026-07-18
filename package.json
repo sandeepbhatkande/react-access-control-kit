@@ -1,6 +1,6 @@
 {
   "name": "react-access-control-kit",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Lightweight TypeScript-first RBAC library for React with zero runtime dependencies",
   "license": "MIT",
   "author": "Sandeep Bhatkande <sandeepbhatkande72@gmail.com>",

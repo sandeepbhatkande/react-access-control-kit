@@ -1,5 +1,22 @@
 import type { AccessState, Permission, Role } from "../types";
 import { ERRORS } from "../constants";
+import { matchPermission } from "../utils/matchPermission";
+import {
+  expandRoles,
+  type RoleHierarchy,
+} from "../utils/expandRoles";
+
+export type { RoleHierarchy } from "../utils/expandRoles";
+export { expandRoles } from "../utils/expandRoles";
+export {
+  matchPermission,
+  permissionMatches,
+} from "../utils/matchPermission";
+
+export interface AccessCheckOptions {
+  /** Role hierarchy used when checking roles. */
+  roleHierarchy?: RoleHierarchy;
+}
 
 function assertAccessState(state: AccessState): void {
   if (
@@ -15,8 +32,14 @@ function toPermissionSet(state: AccessState): ReadonlySet<Permission> {
   return new Set(state.permissions);
 }
 
-function toRoleSet(state: AccessState): ReadonlySet<Role> {
-  return new Set(state.roles);
+function toRoleSet(
+  state: AccessState,
+  options?: AccessCheckOptions,
+): ReadonlySet<Role> {
+  const roles = options?.roleHierarchy
+    ? expandRoles(state.roles, options.roleHierarchy)
+    : state.roles;
+  return new Set(roles);
 }
 
 function assertNonEmptyString(
@@ -43,6 +66,7 @@ function assertStringArray(
 
 /**
  * Check whether the access state includes a specific permission.
+ * Supports wildcards: `*` and `resource:*`.
  */
 export function hasPermission(
   state: AccessState,
@@ -50,7 +74,7 @@ export function hasPermission(
 ): boolean {
   assertAccessState(state);
   assertNonEmptyString(permission, "permission");
-  return toPermissionSet(state).has(permission);
+  return matchPermission(toPermissionSet(state), permission);
 }
 
 /**
@@ -70,7 +94,7 @@ export function hasAnyPermission(
   const set = toPermissionSet(state);
   return permissions.some((permission) => {
     assertNonEmptyString(permission, "permission");
-    return set.has(permission);
+    return matchPermission(set, permission);
   });
 }
 
@@ -91,17 +115,22 @@ export function hasAllPermissions(
   const set = toPermissionSet(state);
   return permissions.every((permission) => {
     assertNonEmptyString(permission, "permission");
-    return set.has(permission);
+    return matchPermission(set, permission);
   });
 }
 
 /**
  * Check whether the access state includes a specific role.
+ * Pass `roleHierarchy` to include inherited roles.
  */
-export function hasRole(state: AccessState, role: Role): boolean {
+export function hasRole(
+  state: AccessState,
+  role: Role,
+  options?: AccessCheckOptions,
+): boolean {
   assertAccessState(state);
   assertNonEmptyString(role, "role");
-  return toRoleSet(state).has(role);
+  return toRoleSet(state, options).has(role);
 }
 
 /**
@@ -111,6 +140,7 @@ export function hasRole(state: AccessState, role: Role): boolean {
 export function hasAnyRole(
   state: AccessState,
   roles: readonly Role[],
+  options?: AccessCheckOptions,
 ): boolean {
   assertAccessState(state);
   assertStringArray(roles, "role");
@@ -118,7 +148,7 @@ export function hasAnyRole(
     return false;
   }
 
-  const set = toRoleSet(state);
+  const set = toRoleSet(state, options);
   return roles.some((role) => {
     assertNonEmptyString(role, "role");
     return set.has(role);
@@ -132,6 +162,7 @@ export function hasAnyRole(
 export function hasAllRoles(
   state: AccessState,
   roles: readonly Role[],
+  options?: AccessCheckOptions,
 ): boolean {
   assertAccessState(state);
   assertStringArray(roles, "role");
@@ -139,7 +170,7 @@ export function hasAllRoles(
     return false;
   }
 
-  const set = toRoleSet(state);
+  const set = toRoleSet(state, options);
   return roles.every((role) => {
     assertNonEmptyString(role, "role");
     return set.has(role);
@@ -152,7 +183,7 @@ export function permissionSetHas(
   permission: Permission,
 ): boolean {
   assertNonEmptyString(permission, "permission");
-  return permissionSet.has(permission);
+  return matchPermission(permissionSet, permission);
 }
 
 export function permissionSetHasAny(
@@ -165,7 +196,7 @@ export function permissionSetHasAny(
   }
   return permissions.some((permission) => {
     assertNonEmptyString(permission, "permission");
-    return permissionSet.has(permission);
+    return matchPermission(permissionSet, permission);
   });
 }
 
@@ -179,7 +210,7 @@ export function permissionSetHasAll(
   }
   return permissions.every((permission) => {
     assertNonEmptyString(permission, "permission");
-    return permissionSet.has(permission);
+    return matchPermission(permissionSet, permission);
   });
 }
 
