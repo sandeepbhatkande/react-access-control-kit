@@ -12,12 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -28,7 +25,7 @@ jobs:
       - name: Ensure NPM_TOKEN is set
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::Repository secret NPM_TOKEN is missing or empty. Add it under Settings → Secrets and variables → Actions."
+            echo "::error::Repository secret NPM_TOKEN is missing or empty."
             exit 1
           fi
           echo "NPM_TOKEN secret is present"
@@ -41,16 +38,37 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v1
+      - name: Read version
+        id: version
+        run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if already published
+        id: check
+        run: |
+          if npm view "react-access-control-kit@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "Version already on npm — skipping publish"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        if: steps.check.outputs.already != 'true'
+        run: |
+          set -e
+          echo "Publishing react-access-control-kit@${{ steps.version.outputs.value }}"
+          export NPM_CONFIG_PROVENANCE=false
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.already != 'true'
+        uses: softprops/action-gh-release@v2
         with:
-          # Disable provenance for classic tokens; enable later with npm Trusted Publishing
-          publish: npm publish --access public --provenance=false
-          title: "chore: version packages"
-          commit: "chore: version packages"
-          createGithubReleases: true
+          tag_name: v${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          body_path: CHANGELOG.md
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
